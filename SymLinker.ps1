@@ -1,4 +1,4 @@
-
+$erroractionPreference="stop" # make sure UnauthorizedAccessException can be caught
 
 if ($env:OS -ne "Windows_NT") {
     Write-Host "Warning: Script has not been tested on any non-windows OS."
@@ -47,6 +47,15 @@ try {
 catch {
     Write-Host "Symlink failed to be created."
     Write-Host $_
+	try {
+		Write-Host "Attempting to unmove files"
+		Copy-Item -Path (Join-Path $target -ChildPath "*") -Destination $path_dir_name
+	}
+	catch {
+		Write-Host "That didn't work either."
+		Write-Host $_
+	}
+	
 }
 
 
