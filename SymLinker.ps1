@@ -8,7 +8,7 @@ if ($env:OS -ne "Windows_NT") {
 
 if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))
 {
-	Write-Host "Admin powers required"
+	Write-Host "Error: Admin powers required."
 	exit 1
 }
 
@@ -16,7 +16,7 @@ try {
 	$path = Read-Host "Enter directory to be moved and linked" | Resolve-Path
 }
 catch {
-	Write-Host "Couldn't resolve path $path: $_"
+	Write-Host "Couldn't resolve path ${path}: $_"
 }
 
 if ( -not (Test-Path -Path $path)) {
@@ -56,7 +56,7 @@ $test_file_name = "test.txt"
 
 try {
 	New-Item -Path $target_parent -ItemType "file" -Name $test_file_name
-	Write-Host "Success creating test file in $target_parent"
+	#Write-Host "Success creating test file in $target_parent"
 }
 catch {
 	Write-Host "Error: Can't create files in $target_parent due to: $_"
@@ -66,12 +66,12 @@ try {
 	Remove-Item -Path (Join-Path -Path $target_parent -ChildPath $test_file_name)
 }
 catch {
-	Write-Host "Error: I accidentally left a test file in $target_parent. sorry about that: $_"
+	Write-Host "Error: I accidentally left a test file in ${target_parent}. sorry about that: $_"
 }
 
 # move data
 try {
-	Write-Host "Moving data to $target"
+	Write-Host "Moving data to $target ... this might take a minute"
 	Move-Item -Path $path -Destination $target_parent -Force
 }
 catch {
