@@ -12,19 +12,22 @@ if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
 	exit 1
 }
 
+try {
+	$path = Read-Host "Enter directory to be moved and linked" | Resolve-Path
+}
+catch {
+	Write-Host "Couldn't resolve path $path: $_"
+}
 
-$path = Read-Host "Enter directory to be moved and linked" | Resolve-Path
 if ( -not (Test-Path -Path $path)) {
     Write-Host "Directory $path not found."
     exit 1
 }
-$target = Read-Host "Enter the new location" | Resolve-Path
 
+$target = Read-Host "Enter the new location" | Resolve-Path
 
 $path_dir_name = Split-Path -Path $path -Leaf -Resolve
 $target_dir_name = Split-Path -Path $target -Leaf -Resolve
-
-
 
 if ($target_dir_name -ieq $path_dir_name) { # if end of target path equals the dir to be linked name
     # don't need to adjust path
@@ -35,9 +38,6 @@ else {
 }
 
 $target_parent = Split-Path -Path $target -Parent
-
-
-Write-Host "Files will be copied to $target"
 
 if (Test-Path -Path $target) { # check if target folder exists
     Write-Host "Target directory already exists:"
@@ -69,16 +69,15 @@ catch {
 	Write-Host "Error: I accidentally left a test file in $target_parent. sorry about that: $_"
 }
 
-
 # move data
 try {
-	Move-Item -Path $path -Destination $target_parent
+	Write-Host "Moving data to $target"
+	Move-Item -Path $path -Destination $target_parent -Force
 }
 catch {
 	Write-Host "Error: Was unable to move the folder: $_"
 	exit 1
 }
-
 
 # create symlink
 try {
@@ -88,6 +87,3 @@ try {
 catch {
     Write-Host "Error: Symlink failed to be created: $_"	
 }
-
-
-
