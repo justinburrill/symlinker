@@ -1,3 +1,4 @@
+
 $erroractionPreference="stop" # make sure UnauthorizedAccessException can be caught
 
 if ($env:OS -ne "Windows_NT") {
@@ -5,17 +6,24 @@ if ($env:OS -ne "Windows_NT") {
     # Break
 }
 
-$path = Read-Host "Enter directory to be moved and linked"
+if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))
+{
+	Write-Host "Admin powers required"
+	exit 1
+}
+
+
+$path = Read-Host "Enter directory to be moved and linked" | Resolve-Path
 if ( -not (Test-Path -Path $path)) {
     Write-Host "Directory $path not found."
-    Break
+    exit 1
 }
-$target = Read-Host "Enter the new location"
+$target = Read-Host "Enter the new location" | Resolve-Path
 
 
-$path_dir_name = Split-Path -Path $path -Leaf
-$target_dir_name = Split-Path -Path $target -Leaf
-$target_dir_parent = Split-Path -Path $target -Parent
+$path_dir_name = Split-Path -Path $path -Leaf -Resolve
+$target_dir_name = Split-Path -Path $target -Leaf -Resolve
+
 
 
 if ($target_dir_name -ieq $path_dir_name) { # if end of target path equals the dir to be linked name
@@ -26,18 +34,51 @@ else {
     # now $target equals the full path of the target, not it's directory
 }
 
+$target_parent = Split-Path -Path $target -Parent
+
+
 Write-Host "Files will be copied to $target"
 
-if ( -not (Test-Path -Path $target)) { # check if target folder exists
-    Write-Host "Target dir not found, creating."
-    New-Item -Type Directory -Path (Split-Path -Path $target -Parent) -Name $path_dir_name
+if (Test-Path -Path $target) { # check if target folder exists
+    Write-Host "Target directory already exists:"
+	try {
+		#New-Item -Type Directory -Path (Split-Path -Path $target -Parent) -Name $path_dir_name
+		Remove-Item $target
+	}
+    catch {
+		Write-Host "Failed to create the target directory:"
+		Write-Host $_
+		exit 1
+	}
 }
 
-# move data
-Copy-Item -Path (Join-Path $path -ChildPath "*") -Destination $target
+$test_file_name = "test.txt"
 
-# delete old folder
-Remove-Item -Path $path -Recurse -Force
+try {
+	New-Item -Path $target_parent -ItemType "file" -Name $test_file_name
+	Write-Host "Success creating test file in $target_parent"
+}
+catch {
+	Write-Host "Error: Can't create files in $target_parent due to: $_"
+	exit 1
+}
+try {
+	Remove-Item -Path (Join-Path -Path $target_parent -ChildPath $test_file_name)
+}
+catch {
+	Write-Host "Error: I accidentally left a test file in $target_parent. sorry about that: $_"
+}
+
+
+# move data
+try {
+	Move-Item -Path $path -Destination $target_parent
+}
+catch {
+	Write-Host "Error: Was unable to move the folder: $_"
+	exit 1
+}
+
 
 # create symlink
 try {
@@ -45,17 +86,7 @@ try {
     Write-Host "Symlink created at $path to $target"
 }
 catch {
-    Write-Host "Symlink failed to be created."
-    Write-Host $_
-	try {
-		Write-Host "Attempting to unmove files"
-		Copy-Item -Path (Join-Path $target -ChildPath "*") -Destination $path_dir_name
-	}
-	catch {
-		Write-Host "That didn't work either."
-		Write-Host $_
-	}
-	
+    Write-Host "Error: Symlink failed to be created: $_"	
 }
 
 
