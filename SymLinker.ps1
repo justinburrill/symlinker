@@ -1,8 +1,8 @@
 function New-Link() {
-	[CmdledBinding()]
+	[CmdletBinding()]
 	param(
 		[Parameter(Mandatory=$true)]
-		[string]$Path
+		[string]$Path,
 		[Parameter(Mandatory=$true)]
 		[string]$Target
 	)
@@ -103,5 +103,3 @@ function New-Link() {
 		Write-Host "Error: Symlink failed to be created: $_"	
 	}
 }
-
-Export-ModuleMemer -Function New-Link
