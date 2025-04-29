@@ -17,38 +17,39 @@ function New-Link() {
 	if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))
 	{
 		Write-Host "Error: Admin powers required."
-		exit 1
+		return
 	}
 
 	try {
 		$path = Resolve-Path $Path
-		#$path = Read-Host "Enter directory to be moved and linked" | Resolve-Path
 	}
 	catch {
 		Write-Host "Couldn't resolve path ${path}: $_"
+		return
 	}
 
 	if ( -not (Test-Path -Path $path)) {
 		Write-Host "Directory $path not found."
-		exit 1
+		return
 	}
 
-	#$target = Read-Host "Enter the new location" | Resolve-Path
 	try {
-		$target = Resolve-Path $Target # TODO: should i resolve this?
+		# TODO: should i resolve this? probably not because if i enter a path that doesn't exist...
+		$target = $Target 
 	}
 	catch {
 		Write-Host "Couldn't resolve target path"
+		return
 	}
 
-	$path_dir_name = Split-Path -Path $path -Leaf -Resolve
-	$target_dir_name = Split-Path -Path $target -Leaf -Resolve
+	$path_item_name = Split-Path -Path $path -Leaf -Resolve
+	$target_item_name = Split-Path -Path $target -Leaf # don't resolve because it may not exist yet
 
-	if ($target_dir_name -ieq $path_dir_name) { # if end of target path equals the dir to be linked name
+	if ($target_item_name -ieq $path_item_name) { # if end of target path equals the dir to be linked name
 		# don't need to adjust path
 	}
 	else {
-		$target = Join-Path -Path $target -ChildPath $path_dir_name
+		$target = Join-Path -Path $target -ChildPath $path_item_name
 		# now $target equals the full path of the target, not it's directory
 	}
 
@@ -57,26 +58,26 @@ function New-Link() {
 	if (Test-Path -Path $target) { # check if target folder exists
 		Write-Host "Target directory already exists:"
 		try {
-			#New-Item -Type Directory -Path (Split-Path -Path $target -Parent) -Name $path_dir_name
 			Remove-Item $target
 		}
 		catch {
-			Write-Host "Failed to create the target directory:"
+			Write-Host "Failed to remove the target directory:"
 			Write-Host $_
-			exit 1
+			return
 		}
 	}
 
 	$test_file_name = "test.txt"
 
+	# create test file
 	try {
-		New-Item -Path $target_parent -ItemType "file" -Name $test_file_name
-		#Write-Host "Success creating test file in $target_parent"
+		New-Item -Path $target_parent -ItemType "file" -Name $test_file_name | Out-Null
 	}
 	catch {
 		Write-Host "Error: Can't create files in $target_parent due to: $_"
-		exit 1
+		return
 	}
+	# remove test file
 	try {
 		Remove-Item -Path (Join-Path -Path $target_parent -ChildPath $test_file_name)
 	}
@@ -88,18 +89,20 @@ function New-Link() {
 	try {
 		Write-Host "Moving data to $target ... this might take a minute"
 		Move-Item -Path $path -Destination $target_parent -Force
+		Write-Host "Success moving data"
 	}
 	catch {
 		Write-Host "Error: Was unable to move the folder: $_"
-		exit 1
+		return
 	}
 
 	# create symlink
 	try {
-		New-Item -ItemType SymbolicLink -Path $path -Target $target
+		New-Item -ItemType SymbolicLink -Path $path -Target $target | Out-Null
 		Write-Host "Symlink created at $path to $target"
 	}
 	catch {
 		Write-Host "Error: Symlink failed to be created: $_"	
+		return
 	}
 }
